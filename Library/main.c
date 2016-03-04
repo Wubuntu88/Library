@@ -7,9 +7,19 @@
 //
 
 #include <stdio.h>
+#include <string.h>
+#include "ClientMessage.h"
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    printf("Hello, World!\n");
+    ClientMessage clientMessage;
+    clientMessage.requestID = 5;
+    clientMessage.requestType = Query;
+    strcpy(clientMessage.isbn, "9780132126953");
+    printf("reqID: %d\n", clientMessage.requestID);
+    
+    if (clientMessage.requestType == Query) {
+        printf("req type: %d\n", clientMessage.requestType);
+    }
+    printf("isbn: %s\n", clientMessage.isbn);
     return 0;
 }
