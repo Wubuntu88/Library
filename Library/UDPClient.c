@@ -33,6 +33,12 @@ int main(int argc, char *argv[])
     //char echoBuffer[ECHOMAX+1];      /* Buffer for receiving echoed string */
     int respStringLen;               /* Length of received response */
     
+    //char welcomeMessage[] = "welcome to the library\n";
+    //char usernamePrompt[] = "Enter your username: ";
+    //char passwordPrompt[] = "
+    char optionsMenu[] = "You can query, borrow, or return books\n\t-type q to query\n\t-type b to borrow\n\t-type r to retrun\n\t-type e to quit\nYour Respones: ";
+    
+    
     if ((argc < 4) || (argc > 5))    /* Test for correct number of arguments */
     {
         fprintf(stderr,"Usage: %s <1: Server IP> <2: user ID> <3: password> [4: <Echo Port>]\n", argv[0]);
@@ -46,9 +52,8 @@ int main(int argc, char *argv[])
     /*********
      start of my code
      *********/
+    /*
     
-    char welcomeMessage[] = "welcome to the library\n";
-    char optionsMenu[] = "You can query, borrow, or return books\n\t-type q to query\n\t-type b to borrow\n\t-type r to retrun\n\t-type e to quit\nYour Respones: ";
     
     ClientMessage clientMessage;
     int clientMessageLen = sizeof(clientMessage);
@@ -62,7 +67,7 @@ int main(int argc, char *argv[])
     printf("ISBN: %s\n", clientMessage.isbn);
     printf("%s", welcomeMessage);
     printf("%s", optionsMenu);
-    
+    */
     
     ServerMessage serverMessage;
     memset(&serverMessage, 0, sizeof(serverMessage));
@@ -71,9 +76,6 @@ int main(int argc, char *argv[])
     /*********
      end of my code
      *********/
-    
-    //if ((echoStringLen = strlen(userId)) > ECHOMAX)  /* Check input length */
-    //    DieWithError("Echo word too long");
     
     if (argc == 5)
         echoServPort = atoi(argv[4]);  /* Use given port, if any */
@@ -90,6 +92,17 @@ int main(int argc, char *argv[])
     echoServAddr.sin_addr.s_addr = inet_addr(servIP);  /* Server IP address */
     echoServAddr.sin_port   = htons(echoServPort);     /* Server port */
     
+    
+    /* get username and password from the user; put it into clientMessage struct */
+    ClientMessage clientMessage;
+    int clientMessageLen = sizeof(clientMessage);
+    memset(&clientMessage, 0, clientMessageLen);
+    printf("welcome to the library\n");
+    printf("Enter Your userID:");
+    scanf("%d", &clientMessage.userID);
+    printf("\nEnter your password: ");
+    scanf("%d", &clientMessage.password);
+    clientMessage.requestType = Login;
     
     /* Send the string to the server */
     if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)

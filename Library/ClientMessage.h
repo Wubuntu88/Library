@@ -14,6 +14,7 @@
 typedef struct {
     unsigned int requestID;
     unsigned int userID;
+    unsigned int password;
     enum {Login, Logout, Query, Borrow, Return} requestType;
     char isbn[13];
 } ClientMessage;
