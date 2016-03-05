@@ -9,6 +9,7 @@
 #include "ClientMessage.h"
 #include "UDPServer.h"
 #include "ServerMessage.h"
+#include "BookInfo.h"
 
 //other imports
 #include <stdio.h>      /* for printf() and fprintf() */
