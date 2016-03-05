@@ -14,6 +14,7 @@
 #include <unistd.h>     /* for close() */
 
 #include "ClientMessage.h"
+#include "ServerMessage.h"
 
 #define ECHOMAX 255     /* Longest string to echo */
 
@@ -29,8 +30,7 @@ int main(int argc, char *argv[])
     char *servIP;                    /* IP address of server */
     char *userId;                /* String to send to echo server */
     char *userPassword;
-    char echoBuffer[ECHOMAX+1];      /* Buffer for receiving echoed string */
-    //int echoStringLen;               /* Length of string to echo */
+    //char echoBuffer[ECHOMAX+1];      /* Buffer for receiving echoed string */
     int respStringLen;               /* Length of received response */
     
     if ((argc < 4) || (argc > 5))    /* Test for correct number of arguments */
@@ -51,7 +51,8 @@ int main(int argc, char *argv[])
     char optionsMenu[] = "You can query, borrow, or return books\n\t-type q to query\n\t-type b to borrow\n\t-type r to retrun\n\t-type e to quit\nYour Respones: ";
     
     ClientMessage clientMessage;
-    memset(&clientMessage, 0, sizeof(clientMessage));
+    int clientMessageLen = sizeof(clientMessage);
+    memset(&clientMessage, 0, clientMessageLen);
     clientMessage.requestID = 5;
     clientMessage.requestType = Query;
     strcpy(clientMessage.isbn, "9780132126953");
@@ -62,6 +63,10 @@ int main(int argc, char *argv[])
     printf("%s", welcomeMessage);
     printf("%s", optionsMenu);
     
+    
+    ServerMessage serverMessage;
+    memset(&serverMessage, 0, sizeof(serverMessage));
+    int serverMessageLen = sizeof(serverMessage);
     
     /*********
      end of my code
@@ -85,7 +90,7 @@ int main(int argc, char *argv[])
     echoServAddr.sin_addr.s_addr = inet_addr(servIP);  /* Server IP address */
     echoServAddr.sin_port   = htons(echoServPort);     /* Server port */
     
-    int clientMessageLen = sizeof(clientMessage);
+    
     /* Send the string to the server */
     if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
                &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)
@@ -95,8 +100,8 @@ int main(int argc, char *argv[])
     
     /* Recv a response */
     fromSize = sizeof(fromAddr);
-    if ((respStringLen = recvfrom(sock, echoBuffer, ECHOMAX, 0,
-                                 (struct sockaddr *) &fromAddr, &fromSize)) != echoStringLen)
+    if ((respStringLen = recvfrom(sock, &serverMessage, serverMessageLen, 0,
+                                 (struct sockaddr *) &fromAddr, &fromSize)) != serverMessageLen)
         DieWithError("recvfrom() failed");
     
     if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
@@ -106,9 +111,9 @@ int main(int argc, char *argv[])
     }
     
     /* null-terminate the received data */
-    echoBuffer[respStringLen] = '\0';
-    printf("Received: %s\n", echoBuffer);    /* Print the echoed arg */
-    
+    //echoBuffer[respStringLen] = '\0';
+    //printf("Received: %s\n", echoBuffer);    /* Print the echoed arg */
+    printf("end");
     close(sock);
     exit(0);
 }

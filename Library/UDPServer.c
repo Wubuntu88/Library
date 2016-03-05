@@ -8,6 +8,7 @@
 //my imports
 #include "ClientMessage.h"
 #include "UDPServer.h"
+#include "ServerMessage.h"
 
 //other imports
 #include <stdio.h>      /* for printf() and fprintf() */
@@ -23,28 +24,15 @@ void DieWithError(char *errorMessage);  /* External error handling function */
 
 int main(int argc, const char * argv[]) {
     
-    typedef struct {
-        unsigned int requestID;
-        unsigned int userID;
-        enum {Okay, ISBNError, AllGone, NoInventory, InvalidLogin} requestType;
-        char isbn[13];
-        char authors[100];
-        char title[100];
-        unsigned int edition;
-        unsigned int year;
-        char publisher[100];
-        unsigned int inventory;
-        unsigned int available;
-    } ServerMessage;
-    
     int sock;                        /* Socket */
     struct sockaddr_in echoServAddr; /* Local address */
     struct sockaddr_in echoClntAddr; /* Client address */
     unsigned int cliAddrLen;         /* Length of incoming message */
-    //char echoBuffer[ECHOMAX];        /* Buffer for echo string */
     ClientMessage cm;
     unsigned short echoServPort;     /* Server port */
     int recvMsgSize;                 /* Size of received message */
+    
+    
     
     if (argc != 2)         /* Test for correct number of parameters */
     {
@@ -72,14 +60,14 @@ int main(int argc, const char * argv[]) {
     {
         /* Set the size of the in-out parameter */
         cliAddrLen = sizeof(echoClntAddr);
-        
+        fprintf(stderr, "before recv");
         /* Block until receive message from a client */
-        if ((recvMsgSize = recvfrom(sock, &cm, ECHOMAX, 0,
+        if ((recvMsgSize = recvfrom(sock, &cm, sizeof(cm), 0,
                                     (struct sockaddr *) &echoClntAddr, &cliAddrLen)) < 0)
             DieWithError("recvfrom() failed");
-        
-        printf("cm req id: %d", cm.requestID);
-        printf("cm isbn: %s", cm.isbn);
+        fprintf(stderr, "after recv");
+        fprintf(stderr, "cm req id: %d", cm.requestID);
+        fprintf(stderr, "cm isbn: %s", cm.isbn);
         //printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
         
         /* Send received datagram back to the client */

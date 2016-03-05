@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		BE7E4D281C8A344C00353AC0 /* ServerMessage.c in Sources */ = {isa = PBXBuildFile; fileRef = BE7E4D261C8A344C00353AC0 /* ServerMessage.c */; };
 		BEA65D5F1C876CCA0072B001 /* ClientMessage.c in Sources */ = {isa = PBXBuildFile; fileRef = BEA65D5D1C876CCA0072B001 /* ClientMessage.c */; };
 		BEA65D611C879EA30072B001 /* DieWithError.c in Sources */ = {isa = PBXBuildFile; fileRef = BEA65D601C879EA30072B001 /* DieWithError.c */; };
 		BEF9692C1C7FA8800033F393 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = BEF9692B1C7FA8800033F393 /* main.c */; };
@@ -27,6 +28,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		BE7E4D261C8A344C00353AC0 /* ServerMessage.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ServerMessage.c; sourceTree = "<group>"; };
+		BE7E4D271C8A344C00353AC0 /* ServerMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ServerMessage.h; sourceTree = "<group>"; };
+		BE7E4D291C8A3AAD00353AC0 /* userIDs */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = userIDs; sourceTree = "<group>"; };
 		BEA65D5D1C876CCA0072B001 /* ClientMessage.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = ClientMessage.c; sourceTree = "<group>"; };
 		BEA65D5E1C876CCA0072B001 /* ClientMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ClientMessage.h; sourceTree = "<group>"; };
 		BEA65D601C879EA30072B001 /* DieWithError.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = DieWithError.c; sourceTree = "<group>"; };
@@ -72,12 +76,15 @@
 				BEA65D601C879EA30072B001 /* DieWithError.c */,
 				BEF9692B1C7FA8800033F393 /* main.c */,
 				BEF969321C7FAB550033F393 /* books.txt */,
+				BE7E4D291C8A3AAD00353AC0 /* userIDs */,
 				BEF969331C7FADFA0033F393 /* UDPClient.c */,
 				BEF969341C7FADFA0033F393 /* UDPClient.h */,
 				BEF969361C7FB5700033F393 /* UDPServer.c */,
 				BEF969371C7FB5700033F393 /* UDPServer.h */,
 				BEA65D5D1C876CCA0072B001 /* ClientMessage.c */,
 				BEA65D5E1C876CCA0072B001 /* ClientMessage.h */,
+				BE7E4D261C8A344C00353AC0 /* ServerMessage.c */,
+				BE7E4D271C8A344C00353AC0 /* ServerMessage.h */,
 			);
 			path = Library;
 			sourceTree = "<group>";
@@ -142,6 +149,7 @@
 				BEF969351C7FADFA0033F393 /* UDPClient.c in Sources */,
 				BEF969381C7FB5700033F393 /* UDPServer.c in Sources */,
 				BEF9692C1C7FA8800033F393 /* main.c in Sources */,
+				BE7E4D281C8A344C00353AC0 /* ServerMessage.c in Sources */,
 				BEA65D611C879EA30072B001 /* DieWithError.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
