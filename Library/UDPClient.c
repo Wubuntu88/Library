@@ -104,6 +104,7 @@ int main(int argc, char *argv[])
     scanf("%d", &clientMessage.password);
     clientMessage.requestType = Login;
     
+    
     /* Send the string to the server */
     if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
                &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)

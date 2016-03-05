@@ -10,8 +10,11 @@
 #include <string.h>
 #include <math.h>
 #include "ClientMessage.h"
+#include "ServerMessage.h"
 
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword);
+int getBookInformationFromFile(ServerMessage serverMessage);
+
 
 int main(int argc, const char * argv[]) {
     int d = doesContainUserIdAndPassword(239, 777);
@@ -22,6 +25,15 @@ int main(int argc, const char * argv[]) {
     }
     return 0;
 }
+/*
+ Fills the struct with the book info if the info was correctly found
+ returns 0 if the book information was not correctly found
+ */
+int getBookInformationFromFile(ServerMessage serverMessage){//maybe include isbn?
+    
+    return -1;
+}
+
 /*
  returns 1 if there is a match; returns 0 if there is no match
  */
