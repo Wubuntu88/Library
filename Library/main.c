@@ -20,6 +20,16 @@ int writeBookInformationToFile(BookInfo bookInfo[], int size);
 int isValidISBN(char isbn[], int size);
 
 int main(int argc, const char * argv[]) {
+    char isbn[14];
+    memset(isbn, 0, sizeof(isbn));
+    printf("Enter the ISBN (or 0 to get out): ");
+    scanf("%s", isbn);
+    printf("%s\n", isbn);
+    //int isValid = isValidISBN(isbn, sizeof(isbn));
+    if (strncmp(isbn, "0\0", 2) == 0){
+        printf("99999\n");
+    }
+    /*
     BookInfo bookInfo[10];
     int nElems;// = &q;
     memset(bookInfo, 0, sizeof(bookInfo));
@@ -32,6 +42,7 @@ int main(int argc, const char * argv[]) {
             printf("invalid\n");
         }
     }
+     */
 
     //writeBookInformationToFile(bookInfo, nElems);
     //printf("S: %lu\n", sizeof(bookInfo)/ sizeof(BookInfo));

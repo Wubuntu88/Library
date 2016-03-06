@@ -10,6 +10,7 @@
 #define BookInfo_h
 
 #include <stdio.h>
+int isValidISBN(char isbn[], int size);
 typedef struct {
     char isbn[14];
     char authors[100];

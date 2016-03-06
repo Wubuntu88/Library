@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+int isValidISBN(char isbn[], int size);
+
 typedef struct {
     unsigned int requestID;
     unsigned int userID;

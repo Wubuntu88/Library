@@ -1,5 +1,3 @@
-ISBN-13|Author(s)|Title|Edition|YearPublished|Publisher|#CopiesInInventory|#CopiesAvailableForLoan
-9780132126953|Andrew Tanenbaum,David Wetherall|Computer Networks|5|2011|Prentice-Hall|5|2
-9780123745408|Michael Donahoo, Kenneth Calvert|TCP/IP Sockets in C|2|2009|Morgan Kaufman|3|0
+9780123745408|Michael Donahoo, Kenneth Calvert|TCP/IP Sockets in C|2|2009|Morgan Kaufman|3|2
 9780133354690|William Stallings|Cryptography and Network Security|6|2014|Prentice-Hall|3|3
 9780072467505|Yale Patt, Sanjay Patel|Introduction to Computing Systems from bits & gates to C & beyond|2|2004|McGraw-Hill|1|0

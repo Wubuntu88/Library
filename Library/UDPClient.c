@@ -4,7 +4,16 @@
 //
 //  Created by William Edward Gillespie on 2/25/16.
 //  Copyright © 2016 William Edward Gillespie. All rights reserved.
-//
+//  Class: COSC 439
+//  Instructor: Dr. Poh
+/*  This program is a client that communicates with the UDPServer.c program
+ To compile, issue the command: gcc -o client.exe UDPClient.c BookInfo.c DieWithError.c
+    To run the program: ./client.exe 127.0.0.1 2001 
+    (that will work on a single machine)
+ 
+    In this program a user can communicate with the server's library database.
+    The user can Query, Borrow, and return books.
+*/
 
 #include <stdio.h>      /* for printf() and fprintf() */
 #include <sys/socket.h> /* for socket(), connect(), sendto(), and recvfrom() */
@@ -15,6 +24,7 @@
 
 #include "ClientMessage.h"
 #include "ServerMessage.h"
+#include "BookInfo.h"
 
 #define ECHOMAX 255     /* Longest string to echo */
 
@@ -28,8 +38,6 @@ int main(int argc, char *argv[])
     unsigned short echoServPort;     /* Echo server port */
     unsigned int fromSize;           /* In-out of address size for recvfrom() */
     char *servIP;                    /* IP address of server */
-    char *userId;                /* String to send to echo server */
-    char *userPassword;
     int respStringLen;               /* Length of received response */
     int requestID = 0;
     
@@ -102,12 +110,14 @@ int main(int argc, char *argv[])
         if (serverMessage.responseType == Okay) {
             printf("\nUser authenticated; welcome to the library.\n");
             break;
-        }else {
+        }else if (serverMessage.responseType == InvalidLogin){
             printf("invalid login credentials; you will have to re-enter your credentials.\n");
+        }else {
+            printf("undefined message from server; you will have to re-enter your credentials.\n");
         }
     }while (1);//loop infinitely until a break statement or a call to exit()
     //now the user is authenticated, the user can query, borrow, return books, or logout.
-    do{
+    MainLoop:do{
         printf("you can query (1), borrow(2), return(3) books, logout(4) or quit(0).\n");
         printf("query (1): \n");
         printf("borrow (2): \n");
@@ -121,27 +131,57 @@ int main(int argc, char *argv[])
         if (choice == 1){//query
             char isbn[sizeof(clientMessage.isbn)];
             memset(isbn, 0, sizeof(isbn));
-            printf("Enter the ISBN: ");
-            scanf("%s", isbn);
-            strcpy(clientMessage.isbn, isbn);
+            do{//loop to get valid ISBN
+                printf("Enter the ISBN (or 0 to get out): ");
+                scanf("%s", isbn);
+                int isValid = isValidISBN(isbn, sizeof(isbn));
+                if (isValid != 0) {//if it is a valid isbn (its valid if its is not 0)
+                    strcpy(clientMessage.isbn, isbn);
+                    break;
+                }else if (strncmp(isbn, "0\0", 2) == 0){
+                    goto MainLoop;//get out and go up to top of do while
+                }else{//invalid isbn
+                    printf("invalid ISBN\n");
+                }
+            }while (1);
             
             clientMessage.requestID = requestID;
             clientMessage.requestType = Query;
         }else if(choice == 2){//borrow
             char isbn[sizeof(clientMessage.isbn)];
             memset(isbn, 0, sizeof(isbn));
-            printf("Enter the ISBN: ");
-            scanf("%s", isbn);
-            strcpy(clientMessage.isbn, isbn);
+            do{//loop to get valid ISBN
+                printf("Enter the ISBN (or 0 to get out): ");
+                scanf("%s", isbn);
+                int isValid = isValidISBN(isbn, sizeof(isbn));
+                if (isValid != 0) {//if it is a valid isbn (its valid if its is not 0)
+                    strcpy(clientMessage.isbn, isbn);
+                    break;
+                }else if (strncmp(isbn, "0\0", 2) == 0){
+                    goto MainLoop;//get out and go up to top of do while
+                }else{//invalid isbn
+                    printf("invalid ISBN\n");
+                }
+            }while (1);
             
             clientMessage.requestID = requestID;
             clientMessage.requestType = Borrow;
         }else if (choice == 3){//return book
             char isbn[sizeof(clientMessage.isbn)];
             memset(isbn, 0, sizeof(isbn));
-            printf("Enter the ISBN: ");
-            scanf("%s", isbn);
-            strcpy(clientMessage.isbn, isbn);
+            do{//loop to get valid ISBN
+                printf("Enter the ISBN (or 0 to get out): ");
+                scanf("%s", isbn);
+                int isValid = isValidISBN(isbn, sizeof(isbn));
+                if (isValid != 0) {//if it is a valid isbn (its valid if its is not 0)
+                    strcpy(clientMessage.isbn, isbn);
+                    break;
+                }else if (strncmp(isbn, "0\0", 2) == 0){
+                    goto MainLoop;//get out and go up to top of do while
+                }else{//invalid isbn
+                    printf("invalid ISBN\n");
+                }
+            }while (1);
             
             clientMessage.requestID = requestID;
             clientMessage.requestType = Return;
@@ -149,6 +189,11 @@ int main(int argc, char *argv[])
             clientMessage.requestID = requestID;
             clientMessage.requestType = Logout;
         }else if(choice == 0){//quit
+            clientMessage.requestID = requestID;
+            clientMessage.requestType = Logout;//tell server I am logging out
+            if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
+                       &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)
+                DieWithError("sendto() sent a different number of bytes than expected");
             printf("exiting program.\n");
             exit(0);
         }else{//undetermined
@@ -191,11 +236,10 @@ int main(int argc, char *argv[])
                 printf("successfully returned: %s\n", serverMessage.title);
             }else if(clientMessage.requestType == Logout){
                 printf("you have logged out; you may log in again if you wish, or quit.\n");
-                goto UserAuthentication;
+                goto UserAuthentication;//go back up so the user can start over
             }
-            
         }else if (serverMessage.responseType == ISBNError){
-            break;
+            printf("the ISBN you entered is invalid\n");
         }else if (serverMessage.responseType == AllGone){
             printf("sorry, there are no more copies of the book: \n");
             printf("%s\n", serverMessage.title);
@@ -203,7 +247,7 @@ int main(int argc, char *argv[])
             printf("Im sorry, this book doesn't exist in our inventory: \n");
             printf("%s\n", serverMessage.title);
         }else {
-            //undetermined
+            printf("Message recieved that isn't a proper response from server.\n");
         }
         
         
