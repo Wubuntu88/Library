@@ -54,6 +54,7 @@ int main(int argc, const char * argv[]) {
     printf("num books: %d\n", numberOfBooks);
     fprintf(stderr, "");
     unsigned int cyclicalDataUpdateCounter = 0;
+    unsigned short TIMES_BETWEEN_UPDATE = 5;
     
     
     if (argc != 2)         /* Test for correct number of parameters */
@@ -113,17 +114,14 @@ int main(int argc, const char * argv[]) {
                 break;
             case Logout:
                 printf("logout");
-                int indexOfLoggingOutUserID = -1;
-                for (int i = 0; i < sizeof(userIDs); i++) {//find userID in array
-                    if (userIDs[i] == clientMessage.userID) {
-                        indexOfLoggingOutUserID = i;
-                        break;
-                    }
-                }
+                serverMessage.requestID = clientMessage.requestID;
+                serverMessage.userID = clientMessage.userID;
+                int indexOfLoggingOutUserID = indexOfUserID(clientMessage.userID, userIDs, sizeof(userIDs));
                 if (indexOfLoggingOutUserID >= 0) {
                     userIDs[indexOfLoggingOutUserID] = -1;
-                }else{
-                    //tell the user that the ID was invalid
+                    serverMessage.responseType = Okay;
+                }else{//if the user tries to log out when they never logged in (should never happen)
+                    serverMessage.responseType = InvalidLogin;//not sure what to send back to client
                 }
                 break;
             case Query:
@@ -131,34 +129,35 @@ int main(int argc, const char * argv[]) {
                 //get isbn from user; must check if it is valid
                 /* MUST DO */
                 
-                
-                int index = indexOfBookInfoForISBN(clientMessage.isbn, bookInfo, numberOfBooks);
-                //BookInfo theBookInfo = bookInfo[indexOfBookInfo];
-                if (index >= 0) {//means it was found
-                    //fill up a struct to send to the user
-                    memset(&serverMessage, 0, sizeof(serverMessage));
-                    strcpy(serverMessage.isbn, bookInfo[index].isbn);
-                    strcpy(serverMessage.authors, bookInfo[index].authors);
-                    strcpy(serverMessage.title, bookInfo[index].title);
-                    serverMessage.edition = bookInfo[index].edition;
-                    serverMessage.year = bookInfo[index].year;
-                    strcpy(serverMessage.publisher, bookInfo[index].publisher);
-                    serverMessage.inventory = bookInfo[index].inventory;
-                    serverMessage.available  = bookInfo[index].available;
-                    
-                    //must fill in some bookkeeping still
-                    serverMessage.requestID = clientMessage.requestID;
-                    serverMessage.userID = clientMessage.userID;
-                    serverMessage.responseType = Okay;
-                    break;//breaks out of foor loop
-                }else{
-                    serverMessage.responseType = NoInventory;
+                //must check if the user is in the system
+                if (indexOfUserID(clientMessage.userID, userIDs, sizeof(userIDs)) < 0) {//not found
+                    serverMessage.responseType = InvalidLogin;
+                }else{//user is in the system
+                    int index = indexOfBookInfoForISBN(clientMessage.isbn, bookInfo, numberOfBooks);
+                    if (index >= 0) {//means the book corresponding to the isbn was found
+                        //fill up a struct to send to the user
+                        memset(&serverMessage, 0, sizeof(serverMessage));
+                        strcpy(serverMessage.isbn, bookInfo[index].isbn);
+                        strcpy(serverMessage.authors, bookInfo[index].authors);
+                        strcpy(serverMessage.title, bookInfo[index].title);
+                        serverMessage.edition = bookInfo[index].edition;
+                        serverMessage.year = bookInfo[index].year;
+                        strcpy(serverMessage.publisher, bookInfo[index].publisher);
+                        serverMessage.inventory = bookInfo[index].inventory;
+                        serverMessage.available  = bookInfo[index].available;
+                        
+                        //must fill in some bookkeeping still
+                        serverMessage.requestID = clientMessage.requestID;
+                        serverMessage.userID = clientMessage.userID;
+                        serverMessage.responseType = Okay;
+                    }else{//book with given isbn was not found
+                        serverMessage.responseType = NoInventory;
+                    }
                 }
                 break;
             case Borrow:
                 serverMessage.requestID = clientMessage.requestID;
                 serverMessage.userID = clientMessage.userID;
-                strncpy(serverMessage.isbn, clientMessage.isbn, sizeof(serverMessage.isbn));
                 printf("borrow");
                 
                 //should check if it is a valid isbn
@@ -177,19 +176,40 @@ int main(int argc, const char * argv[]) {
                         serverMessage.responseType = Okay;
                         strcpy(serverMessage.title, bookInfo[index].title);
                         bookInfo[index].available--;
-                        cyclicalDataUpdateCounter = (cyclicalDataUpdateCounter + 1) % 5;
-                        if (cyclicalDataUpdateCounter == 0) {//if it is a multiple of 5, write
-                            writeBookInformationToFile(bookInfo, numberOfBooks);
-                        }
+                        cyclicalDataUpdateCounter = (cyclicalDataUpdateCounter + 1) % TIMES_BETWEEN_UPDATE;
                     }
                 }
                 break;
             case Return:
                 printf("return");
-                break;
+                serverMessage.requestID = clientMessage.requestID;
+                serverMessage.userID = clientMessage.userID;
+                
+                //should check if it is a valid isbn
+                /* MUST DO */
+                //isbn error
+                
+                if (indexOfUserID(clientMessage.userID, userIDs, sizeof(userIDs)) < 0) {//not found
+                    serverMessage.responseType = InvalidLogin;
+                }else{//means the user has logged in
+                    int index = indexOfBookInfoForISBN(clientMessage.isbn, bookInfo, numberOfBooks);
+                    if (index >= 0) {
+                        serverMessage.responseType = Okay;
+                        strcpy(serverMessage.title, bookInfo[index].title);
+                        bookInfo[index].available++;
+                        cyclicalDataUpdateCounter = (cyclicalDataUpdateCounter + 1) % TIMES_BETWEEN_UPDATE;
+                    }else{//means book with given isbn was not found
+                        serverMessage.responseType = NoInventory;
+                    }
+                }
             default:
                 printf("no request type detected");
+        }//end of switch for requestType
+        
+        if (cyclicalDataUpdateCounter == 0) {//if it is a multiple of 5, write to file
+            writeBookInformationToFile(bookInfo, numberOfBooks);
         }
+        
         printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
         
         /* Send received datagram back to the client */

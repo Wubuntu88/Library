@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     
     printf("welcome to the library\n  You can type your userid and password, or 0 to quit\n");
     
-    do { // authenticating the user; after this do while, the user can
+    UserAuthentication:do { // authenticating the user; after this do while, the user can
         printf("Enter Your userID (or 0 to quit):");
         scanf("%d", &clientMessage.userID);
         if (clientMessage.userID == 0) {
@@ -109,11 +109,12 @@ int main(int argc, char *argv[])
     //now the user is authenticated, the user can query, borrow, return books, or logout.
     do{
         printf("you can query (1), borrow(2), return(3) books, logout(4) or quit(0).\n");
-        printf("query (1): ");
-        printf("borrow (2): ");
-        printf("return (3): ");
-        printf("logout (4): ");
-        printf("quit (0): ");
+        printf("query (1): \n");
+        printf("borrow (2): \n");
+        printf("return (3): \n");
+        printf("logout (4): \n");
+        printf("quit (0): \n");
+        printf("your selection: ");
         
         int choice;
         scanf("%d", &choice);
@@ -136,9 +137,17 @@ int main(int argc, char *argv[])
             clientMessage.requestID = requestID;
             clientMessage.requestType = Borrow;
         }else if (choice == 3){//return book
+            char isbn[sizeof(clientMessage.isbn)];
+            memset(isbn, 0, sizeof(isbn));
+            printf("Enter the ISBN: ");
+            scanf("%s", isbn);
+            strcpy(clientMessage.isbn, isbn);
             
+            clientMessage.requestID = requestID;
+            clientMessage.requestType = Return;
         }else if (choice == 4){//logout
-            
+            clientMessage.requestID = requestID;
+            clientMessage.requestType = Logout;
         }else if(choice == 0){//quit
             printf("exiting program.\n");
             exit(0);
@@ -178,7 +187,11 @@ int main(int argc, char *argv[])
                 printf("Inventory: %d, Available: %d\n", serverMessage.inventory, serverMessage.available);
             }else if(clientMessage.requestType == Borrow){
                 printf("successfully borrowed: %s\n", serverMessage.title);
-                
+            }else if (clientMessage.requestType == Return){
+                printf("successfully returned: %s\n", serverMessage.title);
+            }else if(clientMessage.requestType == Logout){
+                printf("you have logged out; you may log in again if you wish, or quit.\n");
+                goto UserAuthentication;
             }
             
         }else if (serverMessage.responseType == ISBNError){
@@ -187,7 +200,8 @@ int main(int argc, char *argv[])
             printf("sorry, there are no more copies of the book: \n");
             printf("%s\n", serverMessage.title);
         }else if (serverMessage.responseType == NoInventory){
-            printf("No Inventory, sorry.\n");
+            printf("Im sorry, this book doesn't exist in our inventory: \n");
+            printf("%s\n", serverMessage.title);
         }else {
             //undetermined
         }
