@@ -23,6 +23,8 @@
 
 void DieWithError(char *errorMessage);  /* External error handling function */
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword);
+int getBookInformationFromFile(BookInfo bookInfo[], int *size);
+int writeBookInformationToFile(BookInfo bookInfo[], int size);
 
 int main(int argc, const char * argv[]) {
     
@@ -30,12 +32,23 @@ int main(int argc, const char * argv[]) {
     struct sockaddr_in echoServAddr; /* Local address */
     struct sockaddr_in echoClntAddr; /* Client address */
     unsigned int cliAddrLen;         /* Length of incoming message */
-    ClientMessage clientMessage;
     unsigned short echoServPort;     /* Server port */
     int recvMsgSize;                 /* Size of received message */
+    
+    ClientMessage clientMessage;
+    ServerMessage serverMessage;
+    
+    //data structure to hold the userIDs
     int userIDs[200];
     memset(&userIDs, -1, sizeof(userIDs));
     int indexToPutNextUserID = 0;
+    
+    //data structure to hold information about books
+    BookInfo bookInfo[10];
+    int numberOfBooks;
+    memset(bookInfo, 0, sizeof(bookInfo));
+    getBookInformationFromFile(bookInfo, &numberOfBooks);
+    unsigned int numberOfTimesDataUpdated = 0;
     
     
     if (argc != 2)         /* Test for correct number of parameters */
@@ -76,18 +89,26 @@ int main(int argc, const char * argv[]) {
          The server responds to a client based on the client request:
          request types: Login, Logout, Query, Borrow, Return
          */
+        memset(&serverMessage, 0, sizeof(serverMessage));
         switch (clientMessage.requestType) {
             case Login:
                 if (doesContainUserIdAndPassword(clientMessage.userID, clientMessage.password)) {
                     userIDs[indexToPutNextUserID] = clientMessage.userID;
                     indexToPutNextUserID = (indexToPutNextUserID + 1) % sizeof(userIDs);
+                    serverMessage.responseType = Okay;
+                    serverMessage.requestID = clientMessage.requestID;
+                    serverMessage.userID = clientMessage.userID;
+                }else{//if there is no Id and password for the user
+                    serverMessage.responseType = InvalidLogin;
+                    serverMessage.requestID = clientMessage.requestID;
+                    serverMessage.userID = clientMessage.userID;
                 }
-                printf("login");
+                printf("login attempt");
                 break;
             case Logout:
                 printf("logout");
                 int indexOfLoggingOutUserID = -1;
-                for (int i = 0; i < sizeof(userIDs); i++) {
+                for (int i = 0; i < sizeof(userIDs); i++) {//find userID in array
                     if (userIDs[i] == clientMessage.userID) {
                         indexOfLoggingOutUserID = i;
                         break;
@@ -102,8 +123,32 @@ int main(int argc, const char * argv[]) {
             case Query:
                 printf("query");
                 //get isbn from user; must check if it is valid
-                int isbn = 0;
-                scanf("%d", &isbn);
+                int wasFound = 0;
+                for (int i = 0; i < numberOfBooks; i++) {
+                    if (strcmp(bookInfo[i].isbn, clientMessage.isbn) == 0) {
+                        wasFound = 1;
+                        //fill up a struct to send to the user
+                        memset(&serverMessage, 0, sizeof(serverMessage));
+                        strcpy(serverMessage.isbn, bookInfo[i].isbn);
+                        strcpy(serverMessage.authors, bookInfo[i].authors);
+                        strcpy(serverMessage.title, bookInfo[i].title);
+                        serverMessage.edition = bookInfo[i].edition;
+                        serverMessage.year = bookInfo[i].year;
+                        strcpy(serverMessage.publisher, bookInfo[i].publisher);
+                        serverMessage.inventory = bookInfo[i].inventory;
+                        serverMessage.available  = bookInfo[i].available;
+                        
+                        //must fill in some bookkeeping still
+                        serverMessage.requestID = clientMessage.requestID;
+                        serverMessage.userID = clientMessage.userID;
+                        break;
+                    }
+                }
+                if (wasFound == 0) {
+                    //if the isbn was not found, send back NoInventory
+                    serverMessage.responseType = NoInventory;
+                }
+                
                 //MUST TURN INTEGER INTO CHAR ISBN, THEN VALIDATE ISBN
                 //THEN CHECK THE FILE FOR THE INFO AND RETURN IT TO THE USER.
             case Borrow:
@@ -115,15 +160,15 @@ int main(int argc, const char * argv[]) {
             default:
                 printf("no request type detected");
         }
-        //printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
+        printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
         
         /* Send received datagram back to the client */
-        /*
-        if (sendto(sock, echoBuffer, recvMsgSize, 0,
-                   (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != recvMsgSize)
+        
+        if (sendto(sock, &serverMessage, sizeof(serverMessage), 0,
+                   (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) < 0)
             DieWithError("sendto() sent a different number of bytes than expected");
-        */
-    }
+        
+    }//end of infinite for loop
 }//end of main()
 
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword){
@@ -171,6 +216,103 @@ int doesContainUserIdAndPassword(int inputUserId, int inputPassword){
     return 0;//did not match
 }//end of doesContainUserIdAndPassword(int inputUserId, int inputPassword)
 
+int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include isbn?
+    FILE *fp = fopen("books.txt", "r");
+    int bufferSize = 512;
+    char buffer[bufferSize];
+    memset(buffer, 0, bufferSize);
+    
+    int iteration = 0;
+    int isFirstIteration = 1;//1 means yes, 0 means no
+    while (fgets(buffer, bufferSize, (FILE*)fp)) {
+        if (isFirstIteration == 1) {
+            isFirstIteration = 0;
+            continue;
+        }
+        //fprintf(stderr, "buffer: %s\n", buffer);
+        int COUNT_OF_DELIMITERS = 8;
+        int indicesOfDelimiters[COUNT_OF_DELIMITERS];
+        memset(indicesOfDelimiters, 0, sizeof(indicesOfDelimiters));
+        int delimiterCounter = 0;
+        int index = 0;
+        while (buffer[index] != 0) {
+            if (buffer[index] == '|') {
+                indicesOfDelimiters[delimiterCounter] = index;
+                delimiterCounter++;
+            }
+            index++;
+        }
+        
+        indicesOfDelimiters[delimiterCounter] = index - 1;//index of newline
+        
+        /*now I know the delimiters; I can fill the book info array with the info*/
+        //isbn
+        int sizeOfSubstring = indicesOfDelimiters[0] - 1 - 0;
+        memset(bookInfo[iteration].isbn, 0, sizeof(bookInfo[iteration].isbn));
+        strncpy(bookInfo[iteration].isbn, buffer, sizeOfSubstring);
+        
+        //authors
+        memset(bookInfo[iteration].authors, 0, sizeof(bookInfo[iteration].authors));
+        sizeOfSubstring =indicesOfDelimiters[1]  - 1 - indicesOfDelimiters[0];
+        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        
+        //title
+        memset(bookInfo[iteration].title, 0, sizeof(bookInfo[iteration].title));
+        sizeOfSubstring = indicesOfDelimiters[2] - 1 - indicesOfDelimiters[1];
+        strncpy(bookInfo[iteration].title, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        
+        //edition
+        sizeOfSubstring = indicesOfDelimiters[3] - 1 - indicesOfDelimiters[2];
+        char editionChar[sizeOfSubstring + 1];
+        memset(editionChar, 0, sizeof(editionChar));
+        strncpy(editionChar, buffer + indicesOfDelimiters[2] + 1, sizeOfSubstring);
+        int edition = atoi(editionChar);
+        bookInfo[iteration].edition = edition;
+        
+        //year
+        sizeOfSubstring = indicesOfDelimiters[4] - 1 - indicesOfDelimiters[3];
+        char yearChar[sizeOfSubstring + 1];
+        memset(yearChar, 0, sizeof(yearChar));
+        strncpy(yearChar, buffer + indicesOfDelimiters[3] + 1, sizeOfSubstring);
+        int year = atoi(yearChar);
+        bookInfo[iteration].year = year;
+        
+        //publisher
+        sizeOfSubstring = indicesOfDelimiters[5] - 1 - indicesOfDelimiters[4];
+        memset(bookInfo[iteration].publisher, 0, sizeof(bookInfo[iteration].publisher));
+        strncpy(bookInfo[iteration].publisher, buffer + indicesOfDelimiters[4] + 1, sizeOfSubstring);
+        
+        //inventory
+        sizeOfSubstring = indicesOfDelimiters[6] - 1 - indicesOfDelimiters[5];
+        char inventoryChar[sizeOfSubstring + 1];
+        memset(inventoryChar, 0, sizeof(inventoryChar));
+        strncpy(inventoryChar, buffer + indicesOfDelimiters[5] + 1, sizeOfSubstring);
+        int inventory = atoi(inventoryChar);
+        bookInfo[iteration].inventory = inventory;
+        
+        //available
+        sizeOfSubstring = indicesOfDelimiters[7] - 1 - indicesOfDelimiters[6];
+        char availableChar[sizeOfSubstring + 1];
+        memset(availableChar, 0, sizeof(availableChar));
+        strncpy(availableChar, buffer + indicesOfDelimiters[6] + 1, sizeOfSubstring);
+        int available = atoi(availableChar);
+        bookInfo[iteration].available = available;
+        iteration++;
+    }
+    *size = iteration;
+    fclose(fp);
+    return -1;
+}
+
+int writeBookInformationToFile(BookInfo bi[], int size){
+    FILE *fp = fopen("newBooks.txt", "w");
+    for (int i = 0; i < size; i++) {
+        char buffer[1000];
+        sprintf(buffer, "%s|%s|%s|%d|%d|%s|%d|%d\n", bi[i].isbn, bi[i].authors, bi[i].title, bi[i].edition, bi[i].year, bi[i].publisher, bi[i].inventory, bi[i].available);
+        fputs(buffer, fp);
+    }
+    return -1;
+}
 
 
 

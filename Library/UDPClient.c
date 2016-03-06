@@ -30,12 +30,9 @@ int main(int argc, char *argv[])
     char *servIP;                    /* IP address of server */
     char *userId;                /* String to send to echo server */
     char *userPassword;
-    //char echoBuffer[ECHOMAX+1];      /* Buffer for receiving echoed string */
     int respStringLen;               /* Length of received response */
+    int requestID = 0;
     
-    //char welcomeMessage[] = "welcome to the library\n";
-    //char usernamePrompt[] = "Enter your username: ";
-    //char passwordPrompt[] = "
     char optionsMenu[] = "You can query, borrow, or return books\n\t-type q to query\n\t-type b to borrow\n\t-type r to retrun\n\t-type e to quit\nYour Respones: ";
     
     
@@ -48,34 +45,6 @@ int main(int argc, char *argv[])
     servIP = argv[1];           /* First arg: server IP address (dotted quad) */
     userId = argv[2];       /* Second arg: string to echo */
     userPassword = argv[3];
-    
-    /*********
-     start of my code
-     *********/
-    /*
-    
-    
-    ClientMessage clientMessage;
-    int clientMessageLen = sizeof(clientMessage);
-    memset(&clientMessage, 0, clientMessageLen);
-    clientMessage.requestID = 5;
-    clientMessage.requestType = Query;
-    strcpy(clientMessage.isbn, "9780132126953");
-    printf("reqID: %d\n", clientMessage.requestID);
-    printf("req type: %d\n", clientMessage.requestType);
-    
-    printf("ISBN: %s\n", clientMessage.isbn);
-    printf("%s", welcomeMessage);
-    printf("%s", optionsMenu);
-    */
-    
-    ServerMessage serverMessage;
-    memset(&serverMessage, 0, sizeof(serverMessage));
-    int serverMessageLen = sizeof(serverMessage);
-    
-    /*********
-     end of my code
-     *********/
     
     if (argc == 5)
         echoServPort = atoi(argv[4]);  /* Use given port, if any */
@@ -92,17 +61,54 @@ int main(int argc, char *argv[])
     echoServAddr.sin_addr.s_addr = inet_addr(servIP);  /* Server IP address */
     echoServAddr.sin_port   = htons(echoServPort);     /* Server port */
     
+    /* struct for the server message that the client will recieve from server */
+    ServerMessage serverMessage;
+    memset(&serverMessage, 0, sizeof(serverMessage));
+    int serverMessageLen = sizeof(serverMessage);
     
     /* get username and password from the user; put it into clientMessage struct */
     ClientMessage clientMessage;
     int clientMessageLen = sizeof(clientMessage);
     memset(&clientMessage, 0, clientMessageLen);
-    printf("welcome to the library\n");
-    printf("Enter Your userID:");
-    scanf("%d", &clientMessage.userID);
-    printf("\nEnter your password: ");
-    scanf("%d", &clientMessage.password);
-    clientMessage.requestType = Login;
+    
+    printf("welcome to the library\n  You can type your userid and password, or 0 to quit\n");
+    
+    do { // authenticating the user; after this do while, the user can
+        printf("Enter Your userID (or 0 to quit):");
+        scanf("%d", &clientMessage.userID);
+        if (clientMessage.userID == 0) {
+            printf("Exiting program");
+            exit(0);
+        }
+        printf("\nEnter your password: ");
+        scanf("%d", &clientMessage.password);
+        clientMessage.requestType = Login;
+        clientMessage.requestID = requestID;
+        requestID++;
+        if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
+                   &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)
+            DieWithError("sendto() sent a different number of bytes than expected");
+        
+        /* Recv a response */
+        fromSize = sizeof(fromAddr);
+        if ((respStringLen = recvfrom(sock, &serverMessage, serverMessageLen, 0,
+                                      (struct sockaddr *) &fromAddr, &fromSize)) != serverMessageLen)
+            DieWithError("recvfrom() failed");
+        
+        if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
+        {
+            fprintf(stderr,"Error: received a packet from unknown source.\n");
+            exit(1);
+        }
+        
+        if (serverMessage.responseType == Okay) {
+            printf("\nUser authenticated; welcome to the library.");
+            break;
+        }else {
+            printf("invalid login credentials; you will have to re-enter your credentials.");
+        }
+    }while (1);
+    
     
     
     /* Send the string to the server */
