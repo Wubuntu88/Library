@@ -15,7 +15,7 @@ typedef struct {
     unsigned int requestID;
     unsigned int userID;
     enum {Okay, ISBNError, AllGone, NoInventory, InvalidLogin} responseType;
-    char isbn[13];
+    char isbn[14];
     char authors[100];
     char title[100];
     unsigned int edition;

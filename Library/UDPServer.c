@@ -48,6 +48,8 @@ int main(int argc, const char * argv[]) {
     int numberOfBooks;
     memset(bookInfo, 0, sizeof(bookInfo));
     getBookInformationFromFile(bookInfo, &numberOfBooks);
+    printf("num books: %d\n", numberOfBooks);
+    fprintf(stderr, "");
     unsigned int numberOfTimesDataUpdated = 0;
     
     
@@ -98,12 +100,13 @@ int main(int argc, const char * argv[]) {
                     serverMessage.responseType = Okay;
                     serverMessage.requestID = clientMessage.requestID;
                     serverMessage.userID = clientMessage.userID;
+                    printf("successful login attempt; userID: %d\n", clientMessage.userID);
                 }else{//if there is no Id and password for the user
                     serverMessage.responseType = InvalidLogin;
                     serverMessage.requestID = clientMessage.requestID;
                     serverMessage.userID = clientMessage.userID;
+                    printf("unsuccessful login attempt; claimed userID: %d\n", clientMessage.userID);
                 }
-                printf("login attempt");
                 break;
             case Logout:
                 printf("logout");
@@ -121,11 +124,13 @@ int main(int argc, const char * argv[]) {
                 }
                 break;
             case Query:
-                printf("query");
+                printf("query\n");
                 //get isbn from user; must check if it is valid
                 int wasFound = 0;
                 for (int i = 0; i < numberOfBooks; i++) {
+                    printf("bookInfo[i]: %s\n", bookInfo[i].isbn);
                     if (strcmp(bookInfo[i].isbn, clientMessage.isbn) == 0) {
+                        
                         wasFound = 1;
                         //fill up a struct to send to the user
                         memset(&serverMessage, 0, sizeof(serverMessage));
@@ -141,16 +146,16 @@ int main(int argc, const char * argv[]) {
                         //must fill in some bookkeeping still
                         serverMessage.requestID = clientMessage.requestID;
                         serverMessage.userID = clientMessage.userID;
-                        break;
+                        serverMessage.responseType = Okay;
+                        break;//breaks out of foor loop
                     }
                 }
+                fprintf(stderr, "");
                 if (wasFound == 0) {
                     //if the isbn was not found, send back NoInventory
                     serverMessage.responseType = NoInventory;
                 }
-                
-                //MUST TURN INTEGER INTO CHAR ISBN, THEN VALIDATE ISBN
-                //THEN CHECK THE FILE FOR THE INFO AND RETURN IT TO THE USER.
+                break;
             case Borrow:
                 printf("borrow");
                 break;
@@ -216,7 +221,7 @@ int doesContainUserIdAndPassword(int inputUserId, int inputPassword){
     return 0;//did not match
 }//end of doesContainUserIdAndPassword(int inputUserId, int inputPassword)
 
-int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include isbn?
+int getBookInformationFromFile(BookInfo bookInfo[], int *size){
     FILE *fp = fopen("books.txt", "r");
     int bufferSize = 512;
     char buffer[bufferSize];
@@ -247,13 +252,14 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include i
         
         /*now I know the delimiters; I can fill the book info array with the info*/
         //isbn
-        int sizeOfSubstring = indicesOfDelimiters[0] - 1 - 0;
+        int sizeOfSubstring = indicesOfDelimiters[0];
+        
         memset(bookInfo[iteration].isbn, 0, sizeof(bookInfo[iteration].isbn));
         strncpy(bookInfo[iteration].isbn, buffer, sizeOfSubstring);
         
         //authors
         memset(bookInfo[iteration].authors, 0, sizeof(bookInfo[iteration].authors));
-        sizeOfSubstring =indicesOfDelimiters[1]  - 1 - indicesOfDelimiters[0];
+        sizeOfSubstring =indicesOfDelimiters[1] - 1 - indicesOfDelimiters[0];
         strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
         
         //title

@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 typedef struct {
-    char isbn[13];
+    char isbn[14];
     char authors[100];
     char title[100];
     unsigned int edition;

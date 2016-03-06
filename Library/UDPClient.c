@@ -36,18 +36,16 @@ int main(int argc, char *argv[])
     char optionsMenu[] = "You can query, borrow, or return books\n\t-type q to query\n\t-type b to borrow\n\t-type r to retrun\n\t-type e to quit\nYour Respones: ";
     
     
-    if ((argc < 4) || (argc > 5))    /* Test for correct number of arguments */
+    if ((argc < 2) || (argc > 3))    /* Test for correct number of arguments */
     {
-        fprintf(stderr,"Usage: %s <1: Server IP> <2: user ID> <3: password> [4: <Echo Port>]\n", argv[0]);
+        fprintf(stderr,"Usage: %s <1: Server IP> [2: <Echo Port>]\n", argv[0]);
         exit(1);
     }
     
     servIP = argv[1];           /* First arg: server IP address (dotted quad) */
-    userId = argv[2];       /* Second arg: string to echo */
-    userPassword = argv[3];
     
-    if (argc == 5)
-        echoServPort = atoi(argv[4]);  /* Use given port, if any */
+    if (argc == 3)
+        echoServPort = atoi(argv[2]);  /* Use given port, if any */
     else
         echoServPort = 7;  /* 7 is the well-known port for the echo service */
     
@@ -77,7 +75,7 @@ int main(int argc, char *argv[])
         printf("Enter Your userID (or 0 to quit):");
         scanf("%d", &clientMessage.userID);
         if (clientMessage.userID == 0) {
-            printf("Exiting program");
+            printf("Exiting program\n");
             exit(0);
         }
         printf("\nEnter your password: ");
@@ -98,25 +96,97 @@ int main(int argc, char *argv[])
         if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
         {
             fprintf(stderr,"Error: received a packet from unknown source.\n");
-            exit(1);
+            exit(0);
         }
         
         if (serverMessage.responseType == Okay) {
-            printf("\nUser authenticated; welcome to the library.");
+            printf("\nUser authenticated; welcome to the library.\n");
             break;
         }else {
-            printf("invalid login credentials; you will have to re-enter your credentials.");
+            printf("invalid login credentials; you will have to re-enter your credentials.\n");
         }
-    }while (1);
-    
-    
+    }while (1);//loop infinitely until a break statement or a call to exit()
+    //now the user is authenticated, the user can query, borrow, return books, or logout.
+    do{
+        printf("you can query (1), borrow(2), return(3) books, logout(4) or quit(0).\n");
+        printf("query (1): ");
+        printf("borrow (2): ");
+        printf("return (3): ");
+        printf("logout (4): ");
+        printf("quit (0): ");
+        
+        int choice;
+        scanf("%d", &choice);
+        if (choice == 1){//query
+            
+            char isbn[sizeof(clientMessage.isbn)];
+            memset(isbn, 0, sizeof(isbn));
+            printf("Enter the ISBN: ");
+            scanf("%s", isbn);
+            //fgets(isbn, sizeof(isbn), stdin);
+            strncpy(clientMessage.isbn, isbn, sizeof(isbn));
+            clientMessage.requestID = requestID;
+            clientMessage.requestType = Query;
+        }else if(choice == 2){//borrow
+            
+        }else if (choice == 3){//return book
+            
+        }else if (choice == 4){//logout
+            
+        }else if(choice == 0){//quit
+            printf("exiting program.\n");
+            exit(0);
+        }else{//undetermined
+            printf("no valid choice selected; select a valid choice.\n");
+            continue;
+        }
+
+        /* now that the user has chosen an appropriate choice, 
+         I send the message to the server and await a response. */
+        
+        if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
+                   &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)
+            DieWithError("sendto() sent a different number of bytes than expected");
+        
+        /* Recv a response */
+        fromSize = sizeof(fromAddr);
+        if ((respStringLen = recvfrom(sock, &serverMessage, serverMessageLen, 0,
+                                      (struct sockaddr *) &fromAddr, &fromSize)) != serverMessageLen)
+            DieWithError("recvfrom() failed");
+        
+        if (echoServAddr.sin_addr.s_addr != fromAddr.sin_addr.s_addr)
+        {
+            fprintf(stderr,"Error: received a packet from unknown source.\n");
+            exit(0);
+        }
+        
+        /* Now I have the response from the server in the serverMessage struct */
+        if (serverMessage.responseType == Okay) {
+            printf("Book Information:\n");
+            printf("ISBN: %s\n", serverMessage.isbn);
+            printf("Title: %s\n", serverMessage.title);
+            printf("Author(s): %s\n", serverMessage.authors);
+            printf("Pusblisher: %s\n", serverMessage.publisher);
+            printf("Edition: %d, Year: %d\n", serverMessage.edition, serverMessage.year);
+            printf("Inventory: %d, Available: %d\n", serverMessage.inventory, serverMessage.available);
+        }else if (serverMessage.responseType == ISBNError){
+            break;
+        }else if (serverMessage.responseType == AllGone){
+            break;
+        }else if (serverMessage.responseType == NoInventory){
+            printf("No Inventory, sorry.\n");
+        }else {
+            //undetermined
+        }
+        
+        
+        requestID++;
+    }while (1);//loop infinitely until a break statement or a call to exit()
     
     /* Send the string to the server */
     if (sendto(sock, &clientMessage, clientMessageLen, 0, (struct sockaddr *)
                &echoServAddr, sizeof(echoServAddr)) != clientMessageLen)
         DieWithError("sendto() sent a different number of bytes than expected");
-    
-    printf("passed sendto");
     
     /* Recv a response */
     fromSize = sizeof(fromAddr);
