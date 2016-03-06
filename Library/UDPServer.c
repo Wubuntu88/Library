@@ -251,6 +251,7 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){
         indicesOfDelimiters[delimiterCounter] = index - 1;//index of newline
         
         /*now I know the delimiters; I can fill the book info array with the info*/
+        
         //isbn
         int sizeOfSubstring = indicesOfDelimiters[0];
         
