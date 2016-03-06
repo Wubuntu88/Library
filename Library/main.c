@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "ClientMessage.h"
@@ -14,12 +15,24 @@
 #include "BookInfo.h"
 
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword);
-int getBookInformationFromFile(BookInfo bookInfo[], int size);
-
+int getBookInformationFromFile(BookInfo bookInfo[], int *size);
+int writeBookInformationToFile(BookInfo bookInfo[], int size);
 
 int main(int argc, const char * argv[]) {
     BookInfo bookInfo[10];
-    int d = getBookInformationFromFile(bookInfo, sizeof(bookInfo));
+    int nElems;// = &q;
+    memset(bookInfo, 0, sizeof(bookInfo));
+    int d = getBookInformationFromFile(bookInfo, &nElems);
+    writeBookInformationToFile(bookInfo, nElems);
+    //printf("S: %lu\n", sizeof(bookInfo)/ sizeof(BookInfo));
+    /*
+    int i = 0;
+    while (i < 4) {
+        BookInfo bi = bookInfo[i];
+        printf("%s|%s|%s|%d|%d|%s|%d|%d\n", bi.isbn, bi.authors, bi.title, bi.edition, bi.year, bi.publisher, bi.inventory, bi.available);
+        i++;
+    }
+     */
     /*
     int d = doesContainUserIdAndPassword(123, 555);
     if (d == 1) {
@@ -34,18 +47,17 @@ int main(int argc, const char * argv[]) {
  Fills the struct with the book info if the info was correctly found
  returns 0 if the book information was not correctly found
  */
-int getBookInformationFromFile(BookInfo bookInfo[], int size){//maybe include isbn?
+int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include isbn?
     FILE *fp = fopen("books.txt", "r");
     int bufferSize = 512;
     char buffer[bufferSize];
     memset(buffer, 0, bufferSize);
     
     int iteration = 0;
-    
-    int firstIteration = 1;
+    int isFirstIteration = 1;//1 means yes, 0 means no
     while (fgets(buffer, bufferSize, (FILE*)fp)) {
-        if (firstIteration == 1) {
-            firstIteration = 0;
+        if (isFirstIteration == 1) {
+            isFirstIteration = 0;
             continue;
         }
         //fprintf(stderr, "buffer: %s\n", buffer);
@@ -61,26 +73,75 @@ int getBookInformationFromFile(BookInfo bookInfo[], int size){//maybe include is
             }
             index++;
         }
-        //fprintf(stderr, "$$buffer: %s", buffer);
-        //printf("delim counter: %d\n", delimiterCounter);
+
         indicesOfDelimiters[delimiterCounter] = index - 1;//index of newline
-        //fprintf(stderr, "$$buffer: %s", buffer);
-        /*
-        for (int k = 0; k < COUNT_OF_DELIMITERS; k++) {
-            printf("index: %d, value: %d\n", k, indicesOfDelimiters[k]);
-        }
-        */
+
         /*now I know the delimiters; I can fill the book info array with the info*/
-        memset(bookInfo[iteration].isbn, 0, sizeof(bookInfo[iteration]));
-        strncpy(bookInfo[iteration].isbn, buffer, 13);
-        //fprintf(stderr, "buffer: %s\n", buffer);
+        //isbn
+        int sizeOfSubstring = indicesOfDelimiters[0] - 1 - 0;
+        memset(bookInfo[iteration].isbn, 0, sizeof(bookInfo[iteration].isbn));
+        strncpy(bookInfo[iteration].isbn, buffer, sizeOfSubstring);
         
-        fprintf(stderr,"isbn: %s\n", bookInfo[iteration].isbn);
+        //authors
+        memset(bookInfo[iteration].authors, 0, sizeof(bookInfo[iteration].authors));
+        sizeOfSubstring =indicesOfDelimiters[1]  - 1 - indicesOfDelimiters[0];
+        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        
+        //title
+        memset(bookInfo[iteration].title, 0, sizeof(bookInfo[iteration].title));
+        sizeOfSubstring = indicesOfDelimiters[2] - 1 - indicesOfDelimiters[1];
+        strncpy(bookInfo[iteration].title, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        
+        //edition
+        sizeOfSubstring = indicesOfDelimiters[3] - 1 - indicesOfDelimiters[2];
+        char editionChar[sizeOfSubstring + 1];
+        memset(editionChar, 0, sizeof(editionChar));
+        strncpy(editionChar, buffer + indicesOfDelimiters[2] + 1, sizeOfSubstring);
+        int edition = atoi(editionChar);
+        bookInfo[iteration].edition = edition;
+        
+        //year
+        sizeOfSubstring = indicesOfDelimiters[4] - 1 - indicesOfDelimiters[3];
+        char yearChar[sizeOfSubstring + 1];
+        memset(yearChar, 0, sizeof(yearChar));
+        strncpy(yearChar, buffer + indicesOfDelimiters[3] + 1, sizeOfSubstring);
+        int year = atoi(yearChar);
+        bookInfo[iteration].year = year;
+        
+        //publisher
+        sizeOfSubstring = indicesOfDelimiters[5] - 1 - indicesOfDelimiters[4];
+        memset(bookInfo[iteration].publisher, 0, sizeof(bookInfo[iteration].publisher));
+        strncpy(bookInfo[iteration].publisher, buffer + indicesOfDelimiters[4] + 1, sizeOfSubstring);
+        
+        //inventory
+        sizeOfSubstring = indicesOfDelimiters[6] - 1 - indicesOfDelimiters[5];
+        char inventoryChar[sizeOfSubstring + 1];
+        memset(inventoryChar, 0, sizeof(inventoryChar));
+        strncpy(inventoryChar, buffer + indicesOfDelimiters[5] + 1, sizeOfSubstring);
+        int inventory = atoi(inventoryChar);
+        bookInfo[iteration].inventory = inventory;
+        
+        //available
+        sizeOfSubstring = indicesOfDelimiters[7] - 1 - indicesOfDelimiters[6];
+        char availableChar[sizeOfSubstring + 1];
+        memset(availableChar, 0, sizeof(availableChar));
+        strncpy(availableChar, buffer + indicesOfDelimiters[6] + 1, sizeOfSubstring);
+        int available = atoi(availableChar);
+        bookInfo[iteration].available = available;
         iteration++;
-        
     }
-    
+    *size = iteration;
     fclose(fp);
+    return -1;
+}
+
+int writeBookInformationToFile(BookInfo bi[], int size){
+    FILE *fp = fopen("newBooks.txt", "w");
+    for (int i = 0; i < size; i++) {
+        char buffer[1000];
+        sprintf(buffer, "%s|%s|%s|%d|%d|%s|%d|%d\n", bi[i].isbn, bi[i].authors, bi[i].title, bi[i].edition, bi[i].year, bi[i].publisher, bi[i].inventory, bi[i].available);
+        fputs(buffer, fp);
+    }
     return -1;
 }
 
