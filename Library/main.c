@@ -15,14 +15,14 @@
 #include "BookInfo.h"
 
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword);
-int getBookInformationFromFile(BookInfo bookInfo[], int *size);
+void getBookInformationFromFile(BookInfo bookInfo[], int *size);
 int writeBookInformationToFile(BookInfo bookInfo[], int size);
 
 int main(int argc, const char * argv[]) {
     BookInfo bookInfo[10];
     int nElems;// = &q;
     memset(bookInfo, 0, sizeof(bookInfo));
-    int d = getBookInformationFromFile(bookInfo, &nElems);
+    getBookInformationFromFile(bookInfo, &nElems);
     writeBookInformationToFile(bookInfo, nElems);
     //printf("S: %lu\n", sizeof(bookInfo)/ sizeof(BookInfo));
     /*
@@ -47,7 +47,7 @@ int main(int argc, const char * argv[]) {
  Fills the struct with the book info if the info was correctly found
  returns 0 if the book information was not correctly found
  */
-int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include isbn?
+void getBookInformationFromFile(BookInfo bookInfo[], int *size){
     FILE *fp = fopen("books.txt", "r");
     int bufferSize = 512;
     char buffer[bufferSize];
@@ -73,19 +73,21 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include i
             }
             index++;
         }
-
+        
         indicesOfDelimiters[delimiterCounter] = index - 1;//index of newline
-
+        
         /*now I know the delimiters; I can fill the book info array with the info*/
+        
         //isbn
-        int sizeOfSubstring = indicesOfDelimiters[0] - 1 - 0;
+        int sizeOfSubstring = indicesOfDelimiters[0];
+        
         memset(bookInfo[iteration].isbn, 0, sizeof(bookInfo[iteration].isbn));
         strncpy(bookInfo[iteration].isbn, buffer, sizeOfSubstring);
         
         //authors
         memset(bookInfo[iteration].authors, 0, sizeof(bookInfo[iteration].authors));
-        sizeOfSubstring =indicesOfDelimiters[1]  - 1 - indicesOfDelimiters[0];
-        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        sizeOfSubstring =indicesOfDelimiters[1] - 1 - indicesOfDelimiters[0];
+        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[0] + 1, sizeOfSubstring);
         
         //title
         memset(bookInfo[iteration].title, 0, sizeof(bookInfo[iteration].title));
@@ -132,7 +134,6 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){//maybe include i
     }
     *size = iteration;
     fclose(fp);
-    return -1;
 }
 
 int writeBookInformationToFile(BookInfo bi[], int size){
