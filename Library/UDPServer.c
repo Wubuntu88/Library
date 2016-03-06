@@ -18,13 +18,16 @@
 #include <stdlib.h>     /* for atoi() and exit() */
 #include <string.h>     /* for memset() */
 #include <unistd.h>     /* for close() */
+#include <math.h>
 
 #define ECHOMAX 255     /* Longest string to echo */
 
 void DieWithError(char *errorMessage);  /* External error handling function */
 int doesContainUserIdAndPassword(int inputUserId, int inputPassword);
-int getBookInformationFromFile(BookInfo bookInfo[], int *size);
-int writeBookInformationToFile(BookInfo bookInfo[], int size);
+void getBookInformationFromFile(BookInfo bookInfo[], int *size);
+void writeBookInformationToFile(BookInfo bookInfo[], int size);
+int indexOfUserID(int userID, int userIdList[], int sizeOfList);
+int indexOfBookInfoForISBN(char isbn[], BookInfo bookInfo[], int numberOfBooks);
 
 int main(int argc, const char * argv[]) {
     
@@ -50,7 +53,7 @@ int main(int argc, const char * argv[]) {
     getBookInformationFromFile(bookInfo, &numberOfBooks);
     printf("num books: %d\n", numberOfBooks);
     fprintf(stderr, "");
-    unsigned int numberOfTimesDataUpdated = 0;
+    unsigned int cyclicalDataUpdateCounter = 0;
     
     
     if (argc != 2)         /* Test for correct number of parameters */
@@ -126,38 +129,60 @@ int main(int argc, const char * argv[]) {
             case Query:
                 printf("query\n");
                 //get isbn from user; must check if it is valid
-                int wasFound = 0;
-                for (int i = 0; i < numberOfBooks; i++) {
-                    printf("bookInfo[i]: %s\n", bookInfo[i].isbn);
-                    if (strcmp(bookInfo[i].isbn, clientMessage.isbn) == 0) {
-                        
-                        wasFound = 1;
-                        //fill up a struct to send to the user
-                        memset(&serverMessage, 0, sizeof(serverMessage));
-                        strcpy(serverMessage.isbn, bookInfo[i].isbn);
-                        strcpy(serverMessage.authors, bookInfo[i].authors);
-                        strcpy(serverMessage.title, bookInfo[i].title);
-                        serverMessage.edition = bookInfo[i].edition;
-                        serverMessage.year = bookInfo[i].year;
-                        strcpy(serverMessage.publisher, bookInfo[i].publisher);
-                        serverMessage.inventory = bookInfo[i].inventory;
-                        serverMessage.available  = bookInfo[i].available;
-                        
-                        //must fill in some bookkeeping still
-                        serverMessage.requestID = clientMessage.requestID;
-                        serverMessage.userID = clientMessage.userID;
-                        serverMessage.responseType = Okay;
-                        break;//breaks out of foor loop
-                    }
-                }
-                fprintf(stderr, "");
-                if (wasFound == 0) {
-                    //if the isbn was not found, send back NoInventory
+                /* MUST DO */
+                
+                
+                int index = indexOfBookInfoForISBN(clientMessage.isbn, bookInfo, numberOfBooks);
+                //BookInfo theBookInfo = bookInfo[indexOfBookInfo];
+                if (index >= 0) {//means it was found
+                    //fill up a struct to send to the user
+                    memset(&serverMessage, 0, sizeof(serverMessage));
+                    strcpy(serverMessage.isbn, bookInfo[index].isbn);
+                    strcpy(serverMessage.authors, bookInfo[index].authors);
+                    strcpy(serverMessage.title, bookInfo[index].title);
+                    serverMessage.edition = bookInfo[index].edition;
+                    serverMessage.year = bookInfo[index].year;
+                    strcpy(serverMessage.publisher, bookInfo[index].publisher);
+                    serverMessage.inventory = bookInfo[index].inventory;
+                    serverMessage.available  = bookInfo[index].available;
+                    
+                    //must fill in some bookkeeping still
+                    serverMessage.requestID = clientMessage.requestID;
+                    serverMessage.userID = clientMessage.userID;
+                    serverMessage.responseType = Okay;
+                    break;//breaks out of foor loop
+                }else{
                     serverMessage.responseType = NoInventory;
                 }
                 break;
             case Borrow:
+                serverMessage.requestID = clientMessage.requestID;
+                serverMessage.userID = clientMessage.userID;
+                strncpy(serverMessage.isbn, clientMessage.isbn, sizeof(serverMessage.isbn));
                 printf("borrow");
+                
+                //should check if it is a valid isbn
+                /* MUST DO */
+                //isbn error
+                
+                //must check if the user has logged in
+                if (indexOfUserID(clientMessage.userID, userIDs, sizeof(userIDs)) < 0) {//not found
+                    serverMessage.responseType = InvalidLogin;
+                }else{//means the user has logged in
+                    int index = indexOfBookInfoForISBN(clientMessage.isbn, bookInfo, numberOfBooks);
+                    if (bookInfo[index].available == 0) {//no books left
+                        strcpy(serverMessage.title, bookInfo[index].title);
+                        serverMessage.responseType = AllGone;
+                    }else{//means the user can borrow a book; decrement available variables
+                        serverMessage.responseType = Okay;
+                        strcpy(serverMessage.title, bookInfo[index].title);
+                        bookInfo[index].available--;
+                        cyclicalDataUpdateCounter = (cyclicalDataUpdateCounter + 1) % 5;
+                        if (cyclicalDataUpdateCounter == 0) {//if it is a multiple of 5, write
+                            writeBookInformationToFile(bookInfo, numberOfBooks);
+                        }
+                    }
+                }
                 break;
             case Return:
                 printf("return");
@@ -221,7 +246,7 @@ int doesContainUserIdAndPassword(int inputUserId, int inputPassword){
     return 0;//did not match
 }//end of doesContainUserIdAndPassword(int inputUserId, int inputPassword)
 
-int getBookInformationFromFile(BookInfo bookInfo[], int *size){
+void getBookInformationFromFile(BookInfo bookInfo[], int *size){
     FILE *fp = fopen("books.txt", "r");
     int bufferSize = 512;
     char buffer[bufferSize];
@@ -261,7 +286,7 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){
         //authors
         memset(bookInfo[iteration].authors, 0, sizeof(bookInfo[iteration].authors));
         sizeOfSubstring =indicesOfDelimiters[1] - 1 - indicesOfDelimiters[0];
-        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[1] + 1, sizeOfSubstring);
+        strncpy(bookInfo[iteration].authors, buffer + indicesOfDelimiters[0] + 1, sizeOfSubstring);
         
         //title
         memset(bookInfo[iteration].title, 0, sizeof(bookInfo[iteration].title));
@@ -308,19 +333,35 @@ int getBookInformationFromFile(BookInfo bookInfo[], int *size){
     }
     *size = iteration;
     fclose(fp);
-    return -1;
 }
 
-int writeBookInformationToFile(BookInfo bi[], int size){
+void writeBookInformationToFile(BookInfo bi[], int size){
     FILE *fp = fopen("newBooks.txt", "w");
     for (int i = 0; i < size; i++) {
         char buffer[1000];
         sprintf(buffer, "%s|%s|%s|%d|%d|%s|%d|%d\n", bi[i].isbn, bi[i].authors, bi[i].title, bi[i].edition, bi[i].year, bi[i].publisher, bi[i].inventory, bi[i].available);
         fputs(buffer, fp);
     }
+    fclose(fp);
+}
+
+int indexOfUserID(int userID, int userIdList[], int sizeOfList){
+    for(int i = 0; i < sizeOfList; i++){
+        if (userID == userIdList[i]) {
+            return i;
+        }
+    }
     return -1;
 }
 
+int indexOfBookInfoForISBN(char isbn[], BookInfo bookInfo[], int numberOfBooks){
+    for (int i = 0; i < numberOfBooks; i++) {
+        if (strcmp(bookInfo[i].isbn, isbn) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
 
 
 

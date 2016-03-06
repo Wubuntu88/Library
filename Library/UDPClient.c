@@ -118,17 +118,23 @@ int main(int argc, char *argv[])
         int choice;
         scanf("%d", &choice);
         if (choice == 1){//query
-            
             char isbn[sizeof(clientMessage.isbn)];
             memset(isbn, 0, sizeof(isbn));
             printf("Enter the ISBN: ");
             scanf("%s", isbn);
-            //fgets(isbn, sizeof(isbn), stdin);
-            strncpy(clientMessage.isbn, isbn, sizeof(isbn));
+            strcpy(clientMessage.isbn, isbn);
+            
             clientMessage.requestID = requestID;
             clientMessage.requestType = Query;
         }else if(choice == 2){//borrow
+            char isbn[sizeof(clientMessage.isbn)];
+            memset(isbn, 0, sizeof(isbn));
+            printf("Enter the ISBN: ");
+            scanf("%s", isbn);
+            strcpy(clientMessage.isbn, isbn);
             
+            clientMessage.requestID = requestID;
+            clientMessage.requestType = Borrow;
         }else if (choice == 3){//return book
             
         }else if (choice == 4){//logout
@@ -162,17 +168,24 @@ int main(int argc, char *argv[])
         
         /* Now I have the response from the server in the serverMessage struct */
         if (serverMessage.responseType == Okay) {
-            printf("Book Information:\n");
-            printf("ISBN: %s\n", serverMessage.isbn);
-            printf("Title: %s\n", serverMessage.title);
-            printf("Author(s): %s\n", serverMessage.authors);
-            printf("Pusblisher: %s\n", serverMessage.publisher);
-            printf("Edition: %d, Year: %d\n", serverMessage.edition, serverMessage.year);
-            printf("Inventory: %d, Available: %d\n", serverMessage.inventory, serverMessage.available);
+            if (clientMessage.requestType == Query) {
+                printf("Book Information:\n");
+                printf("ISBN: %s\n", serverMessage.isbn);
+                printf("Title: %s\n", serverMessage.title);
+                printf("Author(s): %s\n", serverMessage.authors);
+                printf("Pusblisher: %s\n", serverMessage.publisher);
+                printf("Edition: %d, Year: %d\n", serverMessage.edition, serverMessage.year);
+                printf("Inventory: %d, Available: %d\n", serverMessage.inventory, serverMessage.available);
+            }else if(clientMessage.requestType == Borrow){
+                printf("successfully borrowed: %s\n", serverMessage.title);
+                
+            }
+            
         }else if (serverMessage.responseType == ISBNError){
             break;
         }else if (serverMessage.responseType == AllGone){
-            break;
+            printf("sorry, there are no more copies of the book: \n");
+            printf("%s\n", serverMessage.title);
         }else if (serverMessage.responseType == NoInventory){
             printf("No Inventory, sorry.\n");
         }else {
