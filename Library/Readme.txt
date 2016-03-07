@@ -1,3 +1,4 @@
+Student: William Gillespie
 My client server programs:  These programs simulate making transactions with a library database.
 Client:
 To compile the client program, type: gcc -o client.exe UDPClient.c BookInfo.c DieWithError.c

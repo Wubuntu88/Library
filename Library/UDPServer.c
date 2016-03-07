@@ -370,8 +370,10 @@ void getBookInformationFromFile(BookInfo bookInfo[], int *size){
 
 void writeBookInformationToFile(BookInfo bi[], int size){
     FILE *fp = fopen("books.txt", "w");
+    char buffer[1000];
+    sprintf(buffer, "ISBN-13|Author(s)|Title|Edition|YearPublished|Publisher|#CopiesInInventory|#CopiesAvailableForLoan\n");
+    fputs(buffer, fp);
     for (int i = 0; i < size; i++) {
-        char buffer[1000];
         sprintf(buffer, "%s|%s|%s|%d|%d|%s|%d|%d\n", bi[i].isbn, bi[i].authors, bi[i].title, bi[i].edition, bi[i].year, bi[i].publisher, bi[i].inventory, bi[i].available);
         fputs(buffer, fp);
     }
